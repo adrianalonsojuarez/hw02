@@ -1,0 +1,140 @@
+---
+title: "HW02"
+author: "ADRIAN"
+date: "24 de septiembre de 2017"
+output: github_document
+---
+
+github <- "https://github.com/ucb-stat133/stat133-fall-2017/raw/master/"
+file <- "data/nba2017-player-statistics.csv"
+csv <- paste0(github, file)
+download.file(url = csv, destfile = 'nba2017-player-statistics.csv')
+
+download.file(url = csv, destfile = 'nba2017-player-statistics.csv')
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#What you should include in your Rmd is two code chunks with the commands to import the data, one chunk with read.csv(), and the other with read_csv(). Create one data frame for the output of read.csv(), and use str() to display its structure. Likewise, create another data frame for the output of read_csv() and use str() to check its structure. 
+
+dat <- read.csv("~/UNIVERSIDAD/UC BERKELEY/stat 133/nba2017-player-statistics.csv")
+
+str(dat)
+
+```
+
+```{r warning=FALSE, message=FALSE}
+
+dat <- read_csv("~/UNIVERSIDAD/UC BERKELEY/stat 133/nba2017-player-statistics.csv")
+
+#In both cases you have to explicitly specify the data-type for each column as follows: . the columns Player, Team, and Experience have to be declared as type character. . the column Position has to be declared as a factor with levels 'C', 'PF', 'PG', 'SF', 'SG'. . the column Salary has to be declared as type double (or real). . the rest of the 19 columns have to be declared as type integer. . recall that read.csv() uses the argument colClasses to specify data types. . recall that read_csv() uses the argument col_types to specify data types. 
+
+dat$Position <- factor(dat$Position)
+dat$Salary <- as.double(dat$Salary)
+
+as.integer(dat$Rank, dat$Age, dat$GP, dat$GS, dat$MIN, dat$FGM, dat$FGA, dat$Points3, dat$Points3_atts, dat$Points2, dat$Points2_atts, dat$FTM, dat$FTA, dat$OREB, dat$OREB, dat$DREB, dat$AST, dat$STL, dat$BLK)
+
+
+# Do a bit of preprocessing on the column Experience. This column should be of type character because of the presence of the R values that indicate rookie players. Replace all th eoccurrences of "R" with 1, and then convert the entire column into integers.
+
+ifelse(dat$Experience == "R", 1, dat$Experience)
+dat$Experience <- replace(dat$Experience, dat$Experience=="R", 1)
+
+dat$Experience <- as.numeric(dat$Experience)
+dat$Experience <- as.integer(dat$Experience)
+
+
+# To compute EFF, you will have to add the following variables to your data frame: . Missed_FG (missed ???eld goals) . Missed_FT (missed free throws) . PTS (total points) . REB (total rebounds: o???ensive and defensive)
+
+
+PTS <- dat$Points2 * 2 + dat$Points3 * 3 + dat$FTM 
+REB <- dat$OREB + dat$DREB
+AST <- dat$AST
+STL <- dat$STL
+BLK <- dat$BLK
+Missedfg <- dat$FGA - dat$FGM
+missedft <- dat$FTA - dat$FTM
+GP <- dat$GP
+TO <- dat$TO
+
+# add a variable EFF to the data frame using the formula provided above. Compute summary statistics for EFF as well as a similar histogram.
+
+EFF = (PTS + REB + AST + STL + BLK - Missedfg - missedft - TO) / GP
+
+summary(EFF)
+
+hist(EFF,
+     col= "green")
+
+#Display the player name, team, salary, and EFF value of the top-10 players by EFF in decreasing order (display this information in a data frame). 
+
+
+install.packages(c("dplyr", "ggplot2"))
+library(dplyr)
+library(ggplot2)
+
+dat$EFF <- EFF
+subdat <- select(dat, c("Player", "Team", "Salary", "EFF" ))
+subdat1 <- arrange(subdat, desc(EFF))
+slice(subdat1, 1:10)
+subdat1[1:10, ]
+#subdat <- select(arrange(subdat, desc(EFF)))
+
+
+# Provide the names of the players that have a negative EFF.
+
+dat$Player[EFF<0]
+
+show(EFF<0)
+dat$Player
+#Player number 188 is Patrico Garino
+
+# Use the function cor() to compute the correlation coe???cients between EFF and all the variables used in the EFF formula. 
+
+correlation <- c(
+  cor(EFF, PTS),
+  cor(EFF, REB),
+  cor(EFF, AST),
+  cor(EFF, STL),
+  cor(EFF, BLK),
+  -cor(EFF, Missedfg),
+  -cor(EFF, missedft),
+  -cor(EFF, TO)
+)
+
+#  Notice that Missed_FG, Missed_FT, and TO contribute negatively to EFF, so make sure to take into account this negative association when calculating the correlation coe???cients. Display the computed correlations in descending order, either in a vector or a data frame. And create a barchart with the correlations (bars in decreasing order) like the one below.
+
+
+barplot(correlation, beside = TRUE, ylim = c(0,2), names = c("PTS", "REB", "AST", "STL", "BLK", "Missefg", "Misseft", "TO"))
+
+# produce a scatterplot between E???ciency (x-axis) and Salary (y-axis), including a lowess smooth line (locally weighted scatterplot smoothing). Also, compute the linear correlation coe???cient between them. What can you say about the relationship between these two variables?
+
+dat
+plot(dat$EFF, dat$Salary)
+lines(lowess(dat$EFF, dat$Salary))
+
+
+# Taking into account the column MPG (minutes per game) select those players that have an MPG value of 20 or more minutes per game.
+
+MPG <- dat$MIN / dat$GP
+dat$MPG <- MPG
+dat$Player[MPG >= 20]
+
+# Create a data frame players2 with these players.
+
+players2 <- data.frame(dat$Player[MPG >= 20])
+
+# Use this data frame to create a scatterplot between E???ciency and Salary, including a lowess smooth line. Compute the linear correlation coe???cient between these variables. What can you say about the relationship between these two variables for the set of "more established players"? 
+
+players2
+plot(dat$Salary ~ dat$EFF)
+abline(lm(dat$Salary ~ dat$EFF))
+lines(lowess(dat$Salary ~ dat$EFF))
+
+#There is a clear positive relatonship between the salries and the efficiency of the most established players. 
+
+# Comments and Re???ections Re???ect on what was hard/easy, problems you solved, helpful tutorials you read, etc. . What things were hard, even though you saw them in class/lab? . What was easy(-ish) even though we haven't done it in class/lab? . Did you need help to complete the assignment? If so, what kind of help? . How much time did it take to complete this HW? . What was the most time consuming part? . Was there anything that you did not understand? or fully grasped? . Was there anything frustrating in particular? . Was there anything exciting? Something that you feel proud of? (Don't be shy, we won't tell anyone).
+
+#I think this problem set was much more shorter but harder than the previous one. I have had problems for displaying the player name, team, salary, and EFF value of the top-10 players by EFF in decreasing order and for displaying the computed correlations in descending order, either in a vector or a data frame and create a barchart with the correlations (bars in decreasing order). I needed help for the asigment from the GSI but I am a bit dissapointed as it is very difficult to make an appointment or receive attention as we are so many. Thus, he could not solve many of my doubts.Moreover, I received help from prof. Gaston Sanchez. I feel I am spending a lot of time without being able to achive the right results. Nonetheless, few times I am happy because i achieve to solve certain probems by myself. 
+```
+
